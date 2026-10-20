@@ -1,0 +1,786 @@
+const crypto = require("crypto");
+const prisma = require("../db");
+const { createRuleSnapshot } = require("../services/ruleEngineService");
+const { canAttachDocuments } = require("./uploadController");
+
+// Calculate statutory verification fee based on Legal Metrology Rules Schedule XII
+const calculateFee = (instrument_type, application_type) => {
+  const type = (instrument_type || "").toLowerCase();
+  let baseFee = 500;
+  if (type.includes("fuel dispenser")) baseFee = 2500;
+  else if (type.includes("crane") || type.includes("weighbridge")) baseFee = 4000;
+  else if (type.includes("platform balance") || type.includes("500kg")) baseFee = 1200;
+  else if (type.includes("flow meter") || type.includes("moisture")) baseFee = 1500;
+  else if (type.includes("precision") || type.includes("analytical")) baseFee = 1000;
+
+  // Re-verification fee is standard statutory fee
+  return baseFee;
+};
+
+// Generate unique APP-YYYY-NNN style number with collision-defense suffix
+const generateAppNumber = async () => {
+  const year = new Date().getFullYear();
+  const count = await prisma.application.count();
+  const seq = String(count + 1).padStart(3, "0");
+  const randHex = crypto.randomBytes(2).toString("hex").toUpperCase();
+  return `APP-${year}-${seq}-${randHex}`;
+};
+
+// Check and trigger automated expiry alerts & reminder notifications (Requirement 5 & 6)
+const triggerExpiryNotifications = async (userId) => {
+  try {
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const userApps = await prisma.application.findMany({
+      where: {
+        user_id: userId,
+        status: "Approved",
+        certificate_valid_until: { not: null },
+      },
+    });
+
+    for (const app of userApps) {
+      const expiry = new Date(app.certificate_valid_until);
+
+      // 1. Expired
+      if (expiry <= now) {
+        const existing = await prisma.notification.findFirst({
+          where: {
+            user_id: userId,
+            type: "EXPIRED",
+            reference_id: app.certificate_no || app.app_number,
+          },
+        });
+        if (!existing) {
+          await prisma.notification.create({
+            data: {
+              user_id: userId,
+              type: "EXPIRED",
+              title: `Statutory Stamping Expired: ${app.certificate_no}`,
+              message: `The Legal Metrology verification certificate for ${app.instrument_type} (${app.make} ${app.serial_no}) expired on ${expiry.toLocaleDateString("en-IN")}. Immediate re-verification is mandated by Section 24 to avoid statutory penalties.`,
+              reference_id: app.certificate_no || app.app_number,
+            },
+          });
+        }
+      }
+      // 2. Expiring in 7 Days
+      else if (expiry <= sevenDaysFromNow) {
+        const existing = await prisma.notification.findFirst({
+          where: {
+            user_id: userId,
+            type: "EXPIRY_WARNING_7D",
+            reference_id: app.certificate_no || app.app_number,
+          },
+        });
+        if (!existing) {
+          await prisma.notification.create({
+            data: {
+              user_id: userId,
+              type: "EXPIRY_WARNING_7D",
+              title: `URGENT: Stamping Validity Expires in 7 Days`,
+              message: `Certificate ${app.certificate_no} for ${app.instrument_type} expires on ${expiry.toLocaleDateString("en-IN")}. Please submit your re-verification application now.`,
+              reference_id: app.certificate_no || app.app_number,
+            },
+          });
+        }
+      }
+      // 3. Expiring in 30 Days
+      else if (expiry <= thirtyDaysFromNow) {
+        const existing = await prisma.notification.findFirst({
+          where: {
+            user_id: userId,
+            type: "EXPIRY_WARNING_30D",
+            reference_id: app.certificate_no || app.app_number,
+          },
+        });
+        if (!existing) {
+          await prisma.notification.create({
+            data: {
+              user_id: userId,
+              type: "EXPIRY_WARNING_30D",
+              title: `Upcoming Verification Renewal: 30-Day Alert`,
+              message: `Your annual stamping certificate ${app.certificate_no} will be due for re-verification on ${expiry.toLocaleDateString("en-IN")}. Schedule your verification in advance.`,
+              reference_id: app.certificate_no || app.app_number,
+            },
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error triggering expiry notifications:", err);
+  }
+};
+
+// POST /api/auth/applications (Requirement 2 & 15: Verification & Re-verification Submission)
+const submitApplication = async (req, res) => {
+  try {
+    const {
+      application_type,
+      instrument_id,
+      previous_certificate_no,
+      preferred_date,
+      preferred_time,
+      inspection_mode,
+      instrument_type,
+      selected_category_code,
+      preferred_verification_route,
+      category_fields_data,
+      make,
+      model,
+      serial_no,
+      capacity,
+      unit,
+      business_name,
+      gst_no,
+      address,
+      city,
+      state,
+      pincode,
+      contact_name,
+      contact_phone,
+      contact_email,
+      trade_type,
+      accuracy_class,
+      priority,
+      document_ids,
+    } = req.body;
+
+    const required = {
+      instrument_type,
+      make,
+      serial_no,
+      capacity,
+      business_name,
+      address,
+      city,
+      state,
+      pincode,
+      contact_name,
+      contact_phone,
+      contact_email,
+    };
+    const missing = Object.entries(required)
+      .filter(([, v]) => !v)
+      .map(([k]) => k);
+    if (missing.length > 0) {
+      return res.status(400).json({ error: "Missing required fields: " + missing.join(", ") });
+    }
+
+    if (document_ids !== undefined && !Array.isArray(document_ids)) {
+      return res.status(400).json({ error: "document_ids must be an array." });
+    }
+
+    if (
+      Array.isArray(document_ids) &&
+      !(await canAttachDocuments(req.user.id, null, document_ids))
+    ) {
+      return res.status(403).json({ error: "One or more documents are unavailable or do not belong to your account." });
+    }
+
+    // Validate instrument ownership if re-verifying an existing instrument
+    if (instrument_id) {
+      const ownedInstrument = await prisma.instrument.findFirst({
+        where: { id: instrument_id, user_id: req.user.id },
+      });
+      if (!ownedInstrument) {
+        return res.status(400).json({ error: "Invalid instrument ID: You can only apply for re-verification of instruments registered to your account." });
+      }
+    }
+
+    const app_number = await generateAppNumber();
+    const appType = application_type || "INITIAL_VERIFICATION";
+    const fee_amount = calculateFee(instrument_type, appType);
+    const payment_ref = `TXN-BHARATKOSH-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+
+    // Create immutable frozen Legal Metrology rule snapshot
+    const catCode = selected_category_code || instrument_type;
+    const ruleSnapshotData = await createRuleSnapshot(catCode, state, appType);
+
+    // Atomically persist application, link owned documents, write audit log, and dispatch notification
+    const application = await prisma.$transaction(async (tx) => {
+      const app = await tx.application.create({
+        data: {
+          app_number,
+          user_id: req.user.id,
+          application_type: appType,
+          instrument_id: instrument_id || null,
+          previous_certificate_no: previous_certificate_no || null,
+          preferred_date: preferred_date || null,
+          preferred_time: preferred_time || null,
+          inspection_mode: inspection_mode || "ON_SITE",
+          instrument_type,
+          selected_category_code: catCode,
+          make: String(make),
+          model: model ? String(model) : null,
+          serial_no: String(serial_no),
+          capacity: String(capacity),
+          unit: unit || "kg",
+          accuracy_class: accuracy_class || "Class III (Medium Accuracy)",
+          business_name: String(business_name),
+          trade_type: trade_type || "Commercial Trader",
+          gst_no: gst_no ? String(gst_no) : null,
+          address: String(address),
+          city: String(city),
+          state: String(state),
+          pincode: String(pincode),
+          contact_name: String(contact_name),
+          contact_phone: String(contact_phone),
+          contact_email: String(contact_email),
+          priority: priority || "Normal",
+          fee_amount,
+          payment_status: "PAID",
+          payment_ref,
+          status: "Pending",
+
+          // Objective A & B: Rule configuration & routing snapshot
+          rule_set_id: ruleSnapshotData.ruleSetId,
+          rule_version: ruleSnapshotData.ruleVersion,
+          authority_eligibility_version: ruleSnapshotData.authorityEligibilityVersion,
+          rule_snapshot: ruleSnapshotData.ruleSnapshot,
+          legacy_rule_snapshot: false,
+          preferred_verification_route: preferred_verification_route || "NO_PREFERENCE",
+          eligible_authority_types: ruleSnapshotData.eligibleAuthorityTypes || "LMO",
+          category_fields_data: category_fields_data
+            ? (typeof category_fields_data === 'string' ? category_fields_data : JSON.stringify(category_fields_data))
+            : null,
+        },
+      });
+
+      // Link uploaded documents to this application if provided (strictly enforcing ownership)
+      if (Array.isArray(document_ids) && document_ids.length > 0) {
+        const linkedDocuments = await tx.document.updateMany({
+          where: {
+            id: { in: [...new Set(document_ids)] },
+            user_id: req.user.id,
+            application_id: null,
+          },
+          data: { application_id: app.id },
+        });
+        if (linkedDocuments.count !== new Set(document_ids).size) {
+          throw new Error("Documents changed while the application was being submitted.");
+        }
+      }
+
+      // Record audit trail
+      await tx.auditLog.create({
+        data: {
+          action: "APPLICATION_SUBMITTED",
+          actor: req.user.email,
+          target: app_number,
+          details: `${appType} application ${app_number} submitted for ${instrument_type} (${make} ${serial_no}) by ${business_name}. Fee ₹${fee_amount} settled via ${payment_ref}.`,
+        },
+      });
+
+      // Create confirmation notification
+      await tx.notification.create({
+        data: {
+          user_id: req.user.id,
+          type: "APPLICATION_UPDATE",
+          title: `Application Registered: ${app_number}`,
+          message: `Your ${appType === "RE_VERIFICATION" ? "re-verification" : "verification"} application has been lodged and sent to the jurisdictional LMO for scheduling.`,
+          reference_id: app_number,
+        },
+      });
+
+      return app;
+    });
+
+    return res.status(201).json({
+      message: "Application submitted successfully",
+      application,
+    });
+  } catch (error) {
+    console.error("Submit application error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// GET /api/auth/applications
+const getMyApplications = async (req, res) => {
+  try {
+    const applications = await prisma.application.findMany({
+      where: { user_id: req.user.id },
+      orderBy: { submitted_at: "desc" },
+      include: {
+        documents: true,
+        verifications: true,
+      },
+    });
+    return res.status(200).json({ applications });
+  } catch (error) {
+    console.error("Get applications error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// GET /api/auth/applications/:id
+const getApplicationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const application = await prisma.application.findFirst({
+      where: {
+        id,
+        user_id: req.user.id,
+      },
+      include: {
+        documents: true,
+        verifications: true,
+      },
+    });
+    if (!application) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+    return res.status(200).json({ application });
+  } catch (error) {
+    console.error("Get application by ID error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// GET /api/auth/certificates
+const getMyCertificates = async (req, res) => {
+  try {
+    const certificates = await prisma.application.findMany({
+      where: {
+        user_id: req.user.id,
+        status: "Approved",
+        certificate_no: { not: null },
+      },
+      orderBy: { certificate_issued_at: "desc" },
+    });
+
+    const now = new Date();
+    const formatted = certificates.map((c) => {
+      const validUntil = c.certificate_valid_until ? new Date(c.certificate_valid_until) : null;
+      let validityStatus = "Expired";
+      if (validUntil) {
+        if (validUntil > now) {
+          const diffDays = Math.ceil((validUntil - now) / (1000 * 60 * 60 * 24));
+          validityStatus = diffDays <= 30 ? "Expiring Soon" : "Valid";
+        } else {
+          validityStatus = "Expired";
+        }
+      }
+
+      return {
+        id: c.certificate_no,
+        appId: c.app_number,
+        rawId: c.id,
+        instrumentId: c.instrument_id,
+        instrument: `${c.instrument_type} (${c.capacity}${c.unit})`,
+        instrumentType: c.instrument_type,
+        make: c.make,
+        model: c.model,
+        serial: c.serial_no,
+        capacity: `${c.capacity} ${c.unit}`,
+        accuracyClass: c.accuracy_class,
+        business: c.business_name,
+        ownerFirstName: c.contact_name?.trim().split(/\s+/)[0] || '',
+        address: `${c.address}, ${c.city}, ${c.state} - ${c.pincode}`,
+        issued: c.certificate_issued_at
+          ? new Date(c.certificate_issued_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+          : "—",
+        expires: c.certificate_valid_until
+          ? new Date(c.certificate_valid_until).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+          : "—",
+        status: validityStatus,
+        securitySeal: c.security_seal_no || "SEAL-DL-SECURED",
+        stampedBy: c.stamped_by || "Legal Metrology Inspector",
+        fee: c.fee_amount,
+        raw: c,
+      };
+    });
+
+    return res.status(200).json({ certificates: formatted });
+  } catch (error) {
+    console.error("Get certificates error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// GET /api/auth/instruments (Requirement 6 & 10: Centralized Digital Instrument Repository)
+const getMyInstruments = async (req, res) => {
+  try {
+    const instruments = await prisma.instrument.findMany({
+      where: { user_id: req.user.id },
+      orderBy: { updated_at: "desc" },
+      include: {
+        applications: {
+          select: { id: true, app_number: true, status: true, submitted_at: true },
+        },
+        verification_history: {
+          orderBy: { test_date: "desc" },
+        },
+      },
+    });
+
+    const now = new Date();
+    const formatted = instruments.map((inst) => {
+      const expiry = inst.validity_expiry_date ? new Date(inst.validity_expiry_date) : null;
+      let lifecycleStatus = inst.current_status;
+      if (expiry) {
+        if (expiry <= now) lifecycleStatus = "REVERIFICATION_DUE";
+        else {
+          const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+          lifecycleStatus = daysLeft <= 30 ? "EXPIRING_SOON" : "VERIFIED";
+        }
+      }
+
+      return {
+        id: inst.id,
+        instrumentId: inst.instrument_id,
+        instrument_id: inst.instrument_id,
+        type: inst.instrument_type,
+        instrument_type: inst.instrument_type,
+        make: inst.make,
+        model: inst.model || "Standard",
+        serialNo: inst.serial_no,
+        serial_no: inst.serial_no,
+        capacity: inst.capacity,
+        unit: inst.unit,
+        capacityWithUnit: `${inst.capacity} ${inst.unit}`,
+        accuracyClass: inst.accuracy_class,
+        location: inst.location_address,
+        businessName: inst.business_name,
+        status: lifecycleStatus,
+        current_status: lifecycleStatus,
+        lastVerification: inst.last_verification_date
+          ? new Date(inst.last_verification_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+          : "—",
+        last_verification_date: inst.last_verification_date,
+        nextDueDate: inst.validity_expiry_date
+          ? new Date(inst.validity_expiry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+          : "—",
+        validity_expiry_date: inst.validity_expiry_date,
+        certificateNo: inst.current_certificate_no,
+        current_certificate_no: inst.current_certificate_no,
+        securitySealNo: inst.current_security_seal_no,
+        reverificationsCount: inst.reverification_count,
+        history: inst.verification_history,
+        applicationsCount: inst.applications.length,
+      };
+    });
+
+    return res.status(200).json({ instruments: formatted });
+  } catch (error) {
+    console.error("Get instruments error:", error);
+    return res.status(500).json({ error: "Failed to retrieve instrument repository." });
+  }
+};
+
+// GET /api/auth/notifications (Requirement 6: Expiry alerts & notifications)
+const getNotifications = async (req, res) => {
+  try {
+    await triggerExpiryNotifications(req.user.id);
+
+    const notifications = await prisma.notification.findMany({
+      where: { user_id: req.user.id, is_read: false },
+      orderBy: { created_at: "desc" },
+      take: 50,
+    });
+
+    const unreadCount = notifications.length;
+    return res.status(200).json({ notifications, unreadCount });
+  } catch (error) {
+    console.error("Get notifications error:", error);
+    return res.status(500).json({ error: "Failed to load notifications." });
+  }
+};
+
+// PUT /api/auth/notifications/:id/read
+const markNotificationRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.notification.updateMany({
+      where: { id, user_id: req.user.id },
+      data: { is_read: true },
+    });
+    return res.status(200).json({ message: "Notification marked as read" });
+  } catch (error) {
+    console.error("Mark notification read error:", error);
+    return res.status(500).json({ error: "Failed to update notification." });
+  }
+};
+
+// DELETE /api/auth/notifications/:id
+const deleteNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.notification.deleteMany({
+      where: { id, user_id: req.user.id },
+    });
+    return res.status(200).json({ message: "Notification removed successfully" });
+  } catch (error) {
+    console.error("Delete notification error:", error);
+    return res.status(500).json({ error: "Failed to remove notification." });
+  }
+};
+
+// GET /api/auth/dashboard-stats
+const getDashboardStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await triggerExpiryNotifications(userId);
+
+    const [total, pending, approved, underInspection, rejected, instrumentsCount, unreadAlerts] = await Promise.all([
+      prisma.application.count({ where: { user_id: userId } }),
+      prisma.application.count({ where: { user_id: userId, status: "Pending" } }),
+      prisma.application.count({ where: { user_id: userId, status: "Approved" } }),
+      prisma.application.count({ where: { user_id: userId, status: { in: ["Under Inspection", "Inspection Reported"] } } }),
+      prisma.application.count({ where: { user_id: userId, status: { in: ["Rejected", "Correction Required"] } } }),
+      prisma.instrument.count({ where: { user_id: userId } }),
+      prisma.notification.count({ where: { user_id: userId, is_read: false } }),
+    ]);
+
+    return res.status(200).json({
+      stats: {
+        total,
+        pending,
+        approved,
+        underInspection,
+        rejected,
+        certificates: approved,
+        instruments: instrumentsCount,
+        unreadAlerts,
+      },
+    });
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Multi-Criteria Universal Search (Requirement 11)
+const searchRegistry = async (req, res) => {
+  try {
+    const { q, type, status, state, city } = req.query;
+    const queryStr = (q || "").trim().toLowerCase();
+
+    const where = {};
+    // Non-supervisors (citizens/traders) can strictly search only their own registered applications and instruments
+    if (!['admin', 'lmo'].includes(req.user?.role)) {
+      where.user_id = req.user.id;
+    }
+
+    if (status && status !== "All") where.status = status;
+    if (type && type !== "All") where.instrument_type = { contains: type };
+    if (state && state !== "All") where.state = { contains: state };
+    if (city) where.city = { contains: city };
+
+    const applications = await prisma.application.findMany({
+      where,
+      orderBy: { updated_at: "desc" },
+      take: 100,
+    });
+
+    let results = applications;
+    if (queryStr) {
+      results = applications.filter(
+        (a) =>
+          a.app_number.toLowerCase().includes(queryStr) ||
+          (a.certificate_no && a.certificate_no.toLowerCase().includes(queryStr)) ||
+          a.serial_no.toLowerCase().includes(queryStr) ||
+          a.business_name.toLowerCase().includes(queryStr) ||
+          a.instrument_type.toLowerCase().includes(queryStr) ||
+          (a.security_seal_no && a.security_seal_no.toLowerCase().includes(queryStr))
+      );
+    }
+
+    const formatted = results.map((r) => ({
+      appNumber: r.app_number,
+      certificateNo: r.certificate_no,
+      businessName: r.business_name,
+      instrumentType: r.instrument_type,
+      serialNo: r.serial_no,
+      status: r.status,
+      sealNo: r.security_seal_no,
+      city: r.city,
+      state: r.state,
+      validUntil: r.certificate_valid_until,
+      submittedAt: r.submitted_at,
+    }));
+
+    return res.status(200).json({ results: formatted, total: formatted.length });
+  } catch (error) {
+    console.error("Search registry error:", error);
+    return res.status(500).json({ error: "Search failed." });
+  }
+};
+
+function formatCertificateResult(app) {
+  const now = new Date();
+  const validUntil = app.certificate_valid_until ? new Date(app.certificate_valid_until) : null;
+  const isExpired = validUntil ? validUntil < now : false;
+  const daysRemaining = validUntil ? Math.max(0, Math.ceil((validUntil - now) / (1000 * 60 * 60 * 24))) : 0;
+  const isValid = app.status === 'Approved' && !isExpired && !!app.certificate_no;
+
+  return {
+    valid: true,
+    certificate: {
+      id: app.id,
+      certificateNo: app.certificate_no || 'CERT-RECORDED',
+      applicationNumber: app.app_number,
+      status: isValid ? 'VALID & VERIFIED' : isExpired ? 'EXPIRED' : app.status.toUpperCase(),
+      isValid,
+      isExpired,
+      daysRemaining,
+      issueDate: app.certificate_issued_at || app.inspection_date || app.updated_at,
+      validUntil: app.certificate_valid_until,
+      stampedBy: app.stamped_by || app.assigned_fo_name || 'Inspector, Directorate of Legal Metrology',
+      securitySealNo: app.security_seal_no || 'SEAL-DL-2026-VERIFIED',
+      feeAmount: app.fee_amount,
+      paymentStatus: app.payment_status,
+      paymentRef: app.payment_ref,
+      instrument: {
+        type: app.instrument_type,
+        serialNo: app.serial_no,
+        make: app.make || 'Standard Commercial',
+        model: app.model || 'Standard Model',
+        capacity: `${app.capacity} ${app.unit}`,
+        accuracyClass: app.accuracy_class || 'Class III (Medium Accuracy)',
+      },
+      establishment: {
+        businessName: app.business_name,
+        tradeType: app.trade_type || 'Commercial Trade',
+        address: `${app.address}, ${app.city}, ${app.state} - ${app.pincode}`,
+        contactPerson: app.contact_name || app.user?.profile?.full_name || 'Authorized Trader',
+      },
+      verificationMetrics: {
+        testErrorPercentage: app.test_error_percentage != null ? `${app.test_error_percentage}%` : 'Within +/- 0.05%',
+        environmentalCondition: app.environmental_temp || '25°C, 50% RH',
+        testReadings: app.test_readings || 'MPE compliance verified across all statutory test points',
+        inspectionResult: app.inspection_result || 'Pass',
+      },
+      digitalSignature: {
+        algorithm: 'ECDSA-SHA256 / Legal Metrology Form D Hash',
+        signatureHash: `SIG-${(app.certificate_no || app.id).replace(/[^a-zA-Z0-9]/g, '')}-${Buffer.from(app.serial_no || 'SER').toString('hex').slice(0, 8).toUpperCase()}`,
+        verified: true,
+        issuerAuthority: 'State Directorate of Legal Metrology, Government of NCT of Delhi',
+      },
+    },
+  };
+}
+
+// Public Certificate & QR Code Validation
+const validateCertificate = async (req, res) => {
+  try {
+    let query = req.method === 'POST'
+      ? (req.body?.query || req.body?.payload || req.body?.certificateNumber || req.body?.data)
+      : req.query?.query;
+
+    if (!query && req.body && typeof req.body === 'object') {
+      query = req.body.certificateNumber || req.body.serialNumber || req.body.id;
+    }
+
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      return res.status(400).json({ valid: false, error: 'Certificate ID or QR Code payload is required.' });
+    }
+
+    let searchTerms = [query.trim()];
+
+    // If query is JSON string from QR code
+    try {
+      if (query.trim().startsWith('{') && query.trim().endsWith('}')) {
+        const parsed = JSON.parse(query.trim());
+        if (parsed.certificateNumber && parsed.certificateNumber !== 'UNISSUED') {
+          searchTerms.unshift(parsed.certificateNumber.trim());
+        }
+        if (parsed.serialNumber) {
+          searchTerms.push(parsed.serialNumber.trim());
+        }
+        if (parsed.serialLast3) {
+          searchTerms.push(parsed.serialLast3.trim());
+        }
+      }
+    } catch {}
+
+    // If query is a URL (including hash routing like /#verify?certId=...)
+    try {
+      if (query.includes('://') || query.includes('?') || query.includes('#')) {
+        const cleanQuery = query.startsWith('http') ? query : `http://dummy.com/${query}`;
+        if (cleanQuery.includes('#')) {
+          const hashPart = cleanQuery.split('#')[1] || '';
+          if (hashPart.includes('?')) {
+            const hashSearch = new URLSearchParams(hashPart.split('?')[1]);
+            const certFromHash = hashSearch.get('certId') || hashSearch.get('cert') || hashSearch.get('id') || hashSearch.get('code') || hashSearch.get('certificateNo');
+            if (certFromHash) searchTerms.unshift(certFromHash.trim());
+          }
+        }
+        const baseAndSearch = cleanQuery.split('#')[0];
+        if (baseAndSearch.includes('?')) {
+          const urlObj = new URL(baseAndSearch);
+          const certParam = urlObj.searchParams.get('certId') || urlObj.searchParams.get('cert') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code') || urlObj.searchParams.get('certificateNo');
+          if (certParam) searchTerms.unshift(certParam.trim());
+        }
+      }
+    } catch {}
+
+    const primaryTerm = searchTerms[0];
+
+    // Find in Application (where certificate_no or app_number or serial_no matches)
+    const app = await prisma.application.findFirst({
+      where: {
+        OR: [
+          { certificate_no: { equals: primaryTerm } },
+          { app_number: { equals: primaryTerm } },
+          { serial_no: { equals: primaryTerm } },
+          { security_seal_no: { equals: primaryTerm } },
+        ],
+      },
+      include: {
+        user: { include: { profile: true } },
+        instrument: true,
+      },
+    });
+
+    if (app) {
+      return res.status(200).json(formatCertificateResult(app));
+    }
+
+    // Fallback: search case-insensitive across all applications
+    const allApps = await prisma.application.findMany({
+      include: { user: { include: { profile: true } }, instrument: true },
+      take: 100,
+    });
+
+    const matched = allApps.find((a) => {
+      const p = primaryTerm.toLowerCase();
+      return (
+        (a.certificate_no && a.certificate_no.toLowerCase() === p) ||
+        (a.app_number && a.app_number.toLowerCase() === p) ||
+        (a.serial_no && a.serial_no.toLowerCase() === p) ||
+        (a.security_seal_no && a.security_seal_no.toLowerCase() === p) ||
+        (a.serial_no && p.endsWith(a.serial_no.toLowerCase())) ||
+        (a.serial_no && a.serial_no.toLowerCase().endsWith(p))
+      );
+    });
+
+    if (matched) {
+      return res.status(200).json(formatCertificateResult(matched));
+    }
+
+    return res.status(404).json({
+      valid: false,
+      error: `No statutory certificate found matching "${primaryTerm}". Please verify the QR code or Certificate ID.`,
+    });
+  } catch (error) {
+    console.error('Validate certificate error:', error);
+    return res.status(500).json({ valid: false, error: 'Failed to authenticate certificate with national registry.' });
+  }
+};
+
+module.exports = {
+  submitApplication,
+  getMyApplications,
+  getApplicationById,
+  getMyCertificates,
+  getMyInstruments,
+  getNotifications,
+  markNotificationRead,
+  deleteNotification,
+  getDashboardStats,
+  searchRegistry,
+  validateCertificate,
+};

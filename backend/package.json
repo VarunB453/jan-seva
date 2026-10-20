@@ -1,0 +1,52 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "npx prisma generate && npx prisma db push --accept-data-loss",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed:demo-portals": "node scripts/seed-demo-portals.js",
+    "seed:rules": "node src/rules/seedRules.js",
+    "db:clean": "node scripts/reset-to-default.js",
+    "db:reset-default": "node scripts/reset-to-default.js",
+    "db:reset-deployed": "node scripts/reset-deployed.js",
+    "test": "npm run seed:rules && node test_rules_engine.js && node test_qr_environment.js",
+    "test:qr": "node test_qr_environment.js",
+    "test:e2e": "node test_e2e_qa_engine.js",
+    "test:security": "node test_security_audit.js && node test_security_audit_comprehensive.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "argon2": "^0.45.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.3",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.10",
+    "qrcode": "^1.5.4",
+    "resend": "^6.28.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "prisma": "^5.22.0"
+  },
+  "allowScripts": {
+    "argon2@0.45.1": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true,
+    "fsevents@2.3.3": true,
+    "@prisma/client@5.22.0": true
+  }
+}
