@@ -1,4 +1,4 @@
-# 🎉 Legal Metrology Verification & Certification Portal - SIH26036
+# 🎉JAN SEVA - Legal Metrology Verification & Certification Portal - SIH26036
 ### *Where Precision Meets Celebration!* 🎊
 
 [![CI Pipeline](https://github.com/ZINC137/SIH26036/actions/workflows/ci.yml/badge.svg)](https://github.com/ZINC137/SIH26036/actions/workflows/ci.yml)
