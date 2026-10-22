@@ -19,16 +19,16 @@ test('sets baseline security headers and the configured origins', () => {
     FRONTEND_URL: process.env.FRONTEND_URL,
     NODE_ENV: process.env.NODE_ENV,
   };
-  process.env.BACKEND_URL = 'https://api.example.test';
-  process.env.FRONTEND_URL = 'https://app.example.test';
+  process.env.BACKEND_URL = 'https://api.example.test/';
+  process.env.FRONTEND_URL = 'https://app.example.test/';
   process.env.NODE_ENV = 'development';
 
   try {
     const { headers, nextCalled } = runMiddleware();
     assert.equal(headers.get('X-Content-Type-Options'), 'nosniff');
     assert.equal(headers.get('X-Frame-Options'), 'SAMEORIGIN');
-    assert.match(headers.get('Content-Security-Policy'), /https:\/\/api\.example\.test/);
-    assert.match(headers.get('Content-Security-Policy'), /https:\/\/app\.example\.test/);
+    assert.match(headers.get('Content-Security-Policy'), /connect-src 'self' https:\/\/api\.example\.test https:\/\/app\.example\.test /);
+    assert.doesNotMatch(headers.get('Content-Security-Policy'), /example\.test\//);
     assert.equal(headers.has('Strict-Transport-Security'), false);
     assert.equal(nextCalled, true);
   } finally {
@@ -37,6 +37,11 @@ test('sets baseline security headers and the configured origins', () => {
       else process.env[name] = value;
     }
   }
+});
+
+test('normalizes configured origins for CORS', () => {
+  const { normalizeOrigin } = require('../src/utils/origin');
+  assert.equal(normalizeOrigin('https://app.example.test/'), 'https://app.example.test');
 });
 
 test('enables HSTS in production', () => {

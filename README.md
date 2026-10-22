@@ -80,14 +80,14 @@ cd jan-seva
 ### 2. Configure the backend
 
 ```bash
-cd backend
+cd server
 npm ci
 cp .env.example .env
 ```
 
 If you are using Windows Command Prompt, use `copy .env.example .env` instead of `cp`.
 
-Update `backend/.env` with values appropriate for your local environment:
+Update `server/.env` with values appropriate for your local environment:
 
 ```env
 PORT=5001
@@ -102,11 +102,10 @@ Use your actual database connection string and a securely generated JWT secret. 
 
 ### 3. Initialize the database
 
-Run the following commands from the `backend` directory:
+Run the following commands from the `server` directory:
 
 ```bash
-npx prisma db push
-npx prisma generate
+npm run db:migrate:deploy
 npm run seed:rules
 ```
 
@@ -129,7 +128,7 @@ http://localhost:5001
 Open a second terminal from the repository root:
 
 ```bash
-cd frontend
+cd client
 npm ci
 npm start
 ```
@@ -140,21 +139,19 @@ The frontend is expected to be available at:
 http://localhost:3000
 ```
 
-During local development, the frontend is configured to proxy API requests to the backend on port `5001`.
+During local development, the client proxies API requests to the server on port `5001`.
 
 ---
 
 ## Testing
 
-Run backend tests from the `backend` directory:
+Run server tests from the `server` directory:
 
 ```bash
 npm test
-npm run test:security
-npm run test:e2e
 ```
 
-Run frontend tests and create a production build from the `frontend` directory:
+Run client tests and create a production build from the `client` directory:
 
 ```bash
 npm test -- --watchAll=false
