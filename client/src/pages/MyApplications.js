@@ -13,7 +13,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
