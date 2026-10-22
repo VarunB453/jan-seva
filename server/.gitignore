@@ -1,4 +1,26 @@
+# Dependencies
 node_modules/
+
+# Generated output and test artifacts
 build/
 dist/
-.env    
+coverage/
+.nyc_output/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Local application data; keep Prisma schema and migrations tracked
+uploads/
+backups/
+prisma/*.db
+prisma/*.db-journal
+prisma/*.sqlite
+prisma/*.sqlite3
+
+# Package-manager logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
