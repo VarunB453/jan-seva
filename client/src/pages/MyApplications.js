@@ -119,9 +119,9 @@ export default function MyApplications() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
-            InputProps={{
+            slotProps={{ input: {
               startAdornment: <SearchIcon sx={{ mr: 1, color: '#757575' }} />,
-            }}
+            }}}
           />
         </Box>
       </Card>

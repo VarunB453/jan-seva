@@ -840,13 +840,13 @@ export default function UserApply() {
                     value={form.make}
                     onChange={set("make")}
                     placeholder="e.g. Mettler Toledo / Essae / Avery"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <HandymanOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                   />
                 </Grid>
@@ -859,13 +859,13 @@ export default function UserApply() {
                     value={form.model}
                     onChange={set("model")}
                     placeholder="e.g. DS-215 / IND231"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <NumbersOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                     helperText="Optional (as stamped on nameplate)"
                   />
@@ -879,13 +879,13 @@ export default function UserApply() {
                     value={form.serialNo}
                     onChange={set("serialNo")}
                     placeholder="e.g. SN-2026-99412"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <NumbersOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                     helperText="Permanent embossed or plate serial number"
                   />
@@ -901,13 +901,13 @@ export default function UserApply() {
                       onChange={set("capacity")}
                       type="number"
                       placeholder="e.g. 50"
-                      InputProps={{
+                      slotProps={{ input: {
                         startAdornment: (
                           <InputAdornment position="start">
                             <ScaleOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                           </InputAdornment>
                         ),
-                      }}
+                      }}}
                       sx={{ ...fieldSx, flex: 2 }}
                     />
                     <FormControl sx={{ ...fieldSx, flex: 1, minWidth: 100 }}>
@@ -1116,13 +1116,13 @@ export default function UserApply() {
                     value={form.businessName}
                     onChange={set("businessName")}
                     placeholder="e.g. Metro Commercial Traders Pvt Ltd"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <StorefrontIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                   />
                 </Grid>
@@ -1133,13 +1133,13 @@ export default function UserApply() {
                     value={form.gstNo}
                     onChange={set("gstNo")}
                     placeholder="15-digit GSTIN (optional)"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <ReceiptLongIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                     helperText="Optional for unregistered traders"
                   />
@@ -1153,13 +1153,13 @@ export default function UserApply() {
                     multiline
                     rows={2}
                     placeholder="Shop/Plot number, Market name, Street, Landmark"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start" sx={{ alignSelf: "flex-start", mt: 1 }}>
                           <LocationOnOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                   />
                 </Grid>
@@ -1170,13 +1170,13 @@ export default function UserApply() {
                     value={form.city}
                     onChange={set("city")}
                     placeholder="e.g. North Delhi"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <HomeWorkOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                   />
                 </Grid>
@@ -1187,13 +1187,13 @@ export default function UserApply() {
                     value={form.state}
                     onChange={set("state")}
                     placeholder="e.g. Delhi"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <PlaceOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                   />
                 </Grid>
@@ -1345,13 +1345,13 @@ export default function UserApply() {
                     value={form.contactName}
                     onChange={set("contactName")}
                     placeholder="Full legal name"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <PersonOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                   />
                 </Grid>
@@ -1362,13 +1362,13 @@ export default function UserApply() {
                     value={form.contactPhone}
                     onChange={set("contactPhone")}
                     placeholder="10-digit mobile"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <PhoneOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                     helperText="For inspection SMS alerts"
                   />
@@ -1381,13 +1381,13 @@ export default function UserApply() {
                     onChange={set("contactEmail")}
                     type="email"
                     placeholder="name@company.com"
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: (
                         <InputAdornment position="start">
                           <EmailOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                     sx={fieldSx}
                     helperText="For statutory digital certificates"
                   />

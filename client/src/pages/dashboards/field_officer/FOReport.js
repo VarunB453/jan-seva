@@ -250,19 +250,19 @@ export default function FOReport() {
                 {selectedTask && (
                   <>
                     <Grid item xs={12} sm={6}>
-                      <TextField fullWidth label="Applicant Firm" value={selectedTask.applicant} InputProps={{ readOnly: true }} size="small" />
+                      <TextField fullWidth label="Applicant Firm" value={selectedTask.applicant} slotProps={{ input: { readOnly: true }}} size="small" />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <TextField fullWidth label="Contact Phone" value={selectedTask.contact} InputProps={{ readOnly: true }} size="small" />
+                      <TextField fullWidth label="Contact Phone" value={selectedTask.contact} slotProps={{ input: { readOnly: true }}} size="small" />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth label="Premises Address" value={selectedTask.address} InputProps={{ readOnly: true }} size="small" multiline rows={2} />
+                      <TextField fullWidth label="Premises Address" value={selectedTask.address} slotProps={{ input: { readOnly: true }}} size="small" multiline rows={2} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <TextField fullWidth label="Instrument Specification" value={selectedTask.instrument} InputProps={{ readOnly: true }} size="small" />
+                      <TextField fullWidth label="Instrument Specification" value={selectedTask.instrument} slotProps={{ input: { readOnly: true }}} size="small" />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <TextField fullWidth label="Serial Number" value={selectedTask.serial} InputProps={{ readOnly: true }} size="small" />
+                      <TextField fullWidth label="Serial Number" value={selectedTask.serial} slotProps={{ input: { readOnly: true }}} size="small" />
                     </Grid>
                   </>
                 )}

@@ -289,7 +289,7 @@ export default function LMOPending() {
           size="small"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}}
           sx={{ minWidth: 300, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         />
         <FormControl size="small" sx={{ minWidth: 150 }}>

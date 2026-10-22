@@ -152,9 +152,9 @@ export default function GATCHistory({ userEmail }) {
             placeholder="Search by Report ID, serial, certificate, seal..."
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
-            InputProps={{
+            slotProps={{ input: {
               startAdornment: <InputAdornment position="start"><SearchRoundedIcon sx={{ color: '#94A3B8' }} /></InputAdornment>,
-            }}
+            }}}
             sx={{ minWidth: { xs: '100%', sm: 320 } }}
           />
         </Box>

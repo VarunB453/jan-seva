@@ -234,7 +234,7 @@ export default function Register() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your.email@example.com"
                   sx={inputSx}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><EmailIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}}
                 />
                 <Box>
                   <TextField
@@ -248,7 +248,7 @@ export default function Register() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Minimum 12 characters"
                     sx={inputSx}
-                    InputProps={{
+                    slotProps={{ input: {
                       startAdornment: <InputAdornment position="start"><LockIcon sx={{ color: '#9E9E9E' }} /></InputAdornment>,
                       endAdornment: (
                         <InputAdornment position="end">
@@ -257,7 +257,7 @@ export default function Register() {
                           </IconButton>
                         </InputAdornment>
                       ),
-                    }}
+                    }}}
                   />
                   {strength && (
                     <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -285,7 +285,7 @@ export default function Register() {
                   sx={inputSx}
                   error={confirmPassword.length > 0 && password !== confirmPassword}
                   helperText={confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match' : ''}
-                  InputProps={{
+                  slotProps={{ input: {
                     startAdornment: <InputAdornment position="start"><LockIcon sx={{ color: '#9E9E9E' }} /></InputAdornment>,
                     endAdornment: (
                       <InputAdornment position="end">
@@ -294,7 +294,7 @@ export default function Register() {
                         </IconButton>
                       </InputAdornment>
                     ),
-                  }}
+                  }}}
                 />
 
                 <Button
@@ -339,7 +339,7 @@ export default function Register() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   sx={inputSx}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><PersonIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><PersonIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}}
                 />
 
                 <TextField
@@ -351,7 +351,7 @@ export default function Register() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   sx={inputSx}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}}
                 />
 
                 <TextField
@@ -363,7 +363,7 @@ export default function Register() {
                   value={organization}
                   onChange={(e) => setOrganization(e.target.value)}
                   sx={inputSx}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><BusinessIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><BusinessIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}}
                 />
 
                 <TextField
@@ -377,7 +377,7 @@ export default function Register() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   sx={inputSx}
-                  InputProps={{ startAdornment: <InputAdornment position="start" sx={{ mt: '-32px' }}><HomeIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start" sx={{ mt: '-32px' }}><HomeIcon sx={{ color: '#9E9E9E' }} /></InputAdornment> }}}
                 />
 
                 <Grid container spacing={2}>

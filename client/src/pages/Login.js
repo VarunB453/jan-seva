@@ -651,13 +651,13 @@ export default function Login({ onLogin }) {
                   placeholder="name@domain.gov.in"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  InputProps={{
+                  slotProps={{ input: {
                     startAdornment: (
                       <InputAdornment position="start">
                         <EmailRoundedIcon sx={{ color: '#94A3B8' }} />
                       </InputAdornment>
                     ),
-                  }}
+                  }}}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
@@ -679,7 +679,7 @@ export default function Login({ onLogin }) {
                   placeholder="Enter your confidential password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  InputProps={{
+                  slotProps={{ input: {
                     startAdornment: (
                       <InputAdornment position="start">
                         <LockRoundedIcon sx={{ color: '#94A3B8' }} />
@@ -697,7 +697,7 @@ export default function Login({ onLogin }) {
                         </IconButton>
                       </InputAdornment>
                     ),
-                  }}
+                  }}}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',

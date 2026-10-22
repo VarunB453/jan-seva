@@ -248,13 +248,13 @@ export default function AdminCertificates() {
           size="small"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          InputProps={{
+          slotProps={{ input: {
             startAdornment: (
               <InputAdornment position="start">
                 <SearchIcon sx={{ color: '#94A3B8' }} />
               </InputAdornment>
             ),
-          }}
+          }}}
           sx={{ minWidth: 320, flex: 1, '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' } }}
         />
         <FormControl size="small" sx={{ minWidth: 220 }}>

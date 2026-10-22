@@ -16,7 +16,7 @@
     "db:clean": "node scripts/reset-to-default.js",
     "db:reset-default": "node scripts/reset-to-default.js",
     "db:reset-deployed": "node scripts/reset-deployed.js",
-    "test": "node --test tests"
+    "test": "node --test tests/securityHeaders.test.js"
   },
   "keywords": [],
   "author": "",

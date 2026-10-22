@@ -157,13 +157,13 @@ export default function FOHistory() {
           size="small"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          InputProps={{
+          slotProps={{ input: {
             startAdornment: (
               <InputAdornment position="start">
                 <SearchIcon sx={{ color: '#9E9E9E' }} />
               </InputAdornment>
             ),
-          }}
+          }}}
           sx={{ minWidth: 320, flex: 1, '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' } }}
         />
         <FormControl size="small" sx={{ minWidth: 200 }}>

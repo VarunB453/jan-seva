@@ -1,4 +1,4 @@
-# Legal Metrology Verification & Certification Portal
+# JAN SEVA - Legal Metrology Verification & Certification Portal
 
 A role-based digital platform for managing the verification and certification of weighing and measuring instruments. The portal supports application submission, statutory review, field inspection, laboratory testing, certificate issuance, and public certificate verification.
 

@@ -1363,13 +1363,13 @@ export default function LandingPage() {
                 value={searchCert}
                 onChange={(e) => setSearchCert(e.target.value)}
                 placeholder="e.g. CERT-DL-2026-12BC or cefc"
-                InputProps={{
+                slotProps={{ input: {
                   startAdornment: (
                     <InputAdornment position="start">
                       <SearchRoundedIcon sx={{ color: '#64748B' }} />
                     </InputAdornment>
                   ),
-                }}
+                }}}
                 sx={{
                   bgcolor: '#FFFFFF',
                   borderRadius: '12px',

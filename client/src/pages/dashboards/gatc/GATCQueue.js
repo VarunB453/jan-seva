@@ -229,9 +229,9 @@ export default function GATCQueue({ userEmail }) {
             placeholder="Search by App ID, serial, applicant..."
             value={taskSearch}
             onChange={(e) => setTaskSearch(e.target.value)}
-            InputProps={{
+            slotProps={{ input: {
               startAdornment: <InputAdornment position="start"><SearchRoundedIcon sx={{ color: '#94A3B8' }} /></InputAdornment>,
-            }}
+            }}}
             sx={{ minWidth: { xs: '100%', sm: 280 } }}
           />
         </Box>
