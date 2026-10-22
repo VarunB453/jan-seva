@@ -18,7 +18,7 @@ yarn-debug.log*
 *.db-journal
 *.sqlite
 *.sqlite3
-backend/uploads/
+server/uploads/
 backups/
 
 # Editor and operating-system files

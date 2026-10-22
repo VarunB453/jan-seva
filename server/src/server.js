@@ -146,7 +146,7 @@ const runScheduledBackup = async (reason) => {
     );
     if (snapshot.missingUploads.length > 0) {
       console.error(
-        `[Backup] The database references ${snapshot.missingUploads.length} uploaded file(s) missing from backend/uploads: ` +
+        `[Backup] The database references ${snapshot.missingUploads.length} uploaded file(s) missing from server/uploads: ` +
         snapshot.missingUploads.join(', ')
       );
     }

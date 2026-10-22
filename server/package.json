@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "jan-seva-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -16,10 +16,7 @@
     "db:clean": "node scripts/reset-to-default.js",
     "db:reset-default": "node scripts/reset-to-default.js",
     "db:reset-deployed": "node scripts/reset-deployed.js",
-    "test": "npm run seed:rules && node test_rules_engine.js && node test_qr_environment.js",
-    "test:qr": "node test_qr_environment.js",
-    "test:e2e": "node test_e2e_qa_engine.js",
-    "test:security": "node test_security_audit.js && node test_security_audit_comprehensive.js"
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",

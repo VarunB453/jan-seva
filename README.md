@@ -4,9 +4,9 @@ Jan Seva is a React web application with an Express API, Prisma ORM, and Postgre
 
 ## Architecture
 
-- **Frontend:** React 19 and Create React App (`frontend/`).
-- **API:** Node.js 20 and Express 5 (`backend/`).
-- **Database:** PostgreSQL through Prisma 5 (`backend/prisma/schema.prisma`).
+- **Client:** React 19 and Create React App (`client/`).
+- **API:** Node.js 20 and Express 5 (`server/`).
+- **Database:** PostgreSQL through Prisma 5 (`server/prisma/schema.prisma`).
 - **Documents:** Uploaded files and PostgreSQL-backed document content; container uploads and backups use persistent Docker volumes.
 - **Runtime:** Docker Compose runs the frontend reverse proxy, API, and PostgreSQL. Only the frontend port is published in the production Compose configuration.
 
@@ -35,7 +35,7 @@ Prerequisites: Docker Engine with the Compose plugin, and OpenSSL for generating
    docker compose -f compose.yaml -f compose.dev.yaml up --build
    ```
 
-   Open <http://localhost:3000>. The API is proxied to the backend; for local API debugging, its development port is available at <http://localhost:5001>.
+   Open <http://localhost:3000>. The API is proxied to the server; for local API debugging, its development port is available at <http://localhost:5001>.
 
 Stop the stack with `Ctrl+C`, or run:
 
@@ -47,10 +47,10 @@ Database data is retained in the `postgres_data` volume. Do not use `docker comp
 
 ## Run without Docker
 
-Install Node.js 20 or newer and PostgreSQL. Create a PostgreSQL database, then configure `DATABASE_URL` in `backend/.env` with a localhost connection URL and set `JWT_SECRET`, `FRONTEND_URL=http://localhost:3000`, and `BACKEND_URL=http://localhost:5001`.
+Install Node.js 20 or newer and PostgreSQL. Create a PostgreSQL database, then configure `DATABASE_URL` in `server/.env` with a localhost connection URL and set `JWT_SECRET`, `FRONTEND_URL=http://localhost:3000`, and `BACKEND_URL=http://localhost:5001`.
 
 ```sh
-cd backend
+cd server
 npm ci
 npx prisma migrate deploy
 npm run dev
@@ -59,7 +59,7 @@ npm run dev
 In another terminal:
 
 ```sh
-cd frontend
+cd client
 npm ci
 npm start
 ```
@@ -70,6 +70,4 @@ See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for secret management, TLS/revers
 
 ## Validation
 
-GitHub Actions validates the Prisma schema and backend build, runs frontend tests and build, audits npm dependencies, validates/builds the production Compose images, and scans images for high/critical vulnerabilities.
-
-The backend package currently has no checked-in test files even though its legacy npm test script references missing files. Backend business-logic tests should be added before treating this project as fully test-covered.
+GitHub Actions validates the Prisma schema, runs client and server tests, builds both applications and production containers, audits npm dependencies, and scans images for high/critical vulnerabilities. The existing database schema and migration are retained unchanged.

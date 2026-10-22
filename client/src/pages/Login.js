@@ -452,7 +452,7 @@ export default function Login({ onLogin }) {
           )}
           {showDemoCredentials && demoCredentialsError && (
             <Alert severity="warning" sx={{ mb: 3 }}>
-              {demoCredentialsError} Start the local backend and run <code>npm run seed:demo-portals</code> from <code>backend/</code>.
+              {demoCredentialsError} Start the local API and run <code>npm run seed:demo-portals</code> from <code>server/</code>.
             </Alert>
           )}
 

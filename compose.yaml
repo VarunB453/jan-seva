@@ -19,7 +19,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ./server
       target: production
     environment:
       NODE_ENV: production
@@ -62,7 +62,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./client
       target: production
       args:
         REACT_APP_API_URL: ""

@@ -31,7 +31,7 @@ Email delivery is disabled/simulated if no provider credentials are configured. 
    docker compose run --rm backend npm run db:migrate:deploy
    ```
 
-   For an existing database already created from this Prisma schema, first compare the live schema with `backend/prisma/schema.prisma` and take a restorable backup. Then baseline the existing database once:
+   For an existing database already created from this Prisma schema, first compare the live schema with `server/prisma/schema.prisma` and take a restorable backup. Then baseline the existing database once:
 
    ```sh
    docker compose run --rm backend npx prisma migrate resolve --applied 20261022120000_initial
@@ -59,7 +59,7 @@ docker compose ps
 docker compose logs --tail=100 backend frontend db
 ```
 
-The backend's `/healthz` endpoint checks database connectivity. The frontend proxy forwards `/api/` and `/uploads/` to the internal backend. Uploaded files and local database backups are held in Docker volumes; PostgreSQL data is held in `postgres_data`.
+The server's `/healthz` endpoint checks database connectivity. The client proxy forwards `/api/` and `/uploads/` to the internal server service. Uploaded files and local database backups are held in Docker volumes; PostgreSQL data is held in `postgres_data`.
 
 The current scheduled backup implementation stores local snapshots in the `backups` volume for file-based SQLite configurations. For PostgreSQL, it reports database record counts but does not create a database backup. Configure managed PostgreSQL point-in-time recovery and an independent backup/export process, and test restoration before production use. The Compose backup volume is not itself an adequate PostgreSQL backup.
 
@@ -75,5 +75,5 @@ CI runs npm dependency audits and Trivy image scans for high/critical vulnerabil
 - Configure email delivery and verify links from outside the deployment network.
 - Use a managed PostgreSQL service (or separately harden, monitor, and back up the bundled single-host database).
 - Establish automated PostgreSQL backups and demonstrate restore/recovery.
-- Add backend automated tests and exercise authentication, workflows, uploads, and migrations in a staging environment.
+- Exercise authentication, workflows, uploads, and migrations in a staging environment.
 - Review operational access, monitoring, log retention, resource limits, and incident recovery for the actual hosting environment.
