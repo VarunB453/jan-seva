@@ -39,6 +39,16 @@ app.use(cors({
   credentials: true, // Allow cookies to be sent
 }));
 
+app.get('/healthz', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: 'ok' });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ status: 'unavailable' });
+  }
+});
+
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });

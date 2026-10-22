@@ -1,0 +1,28 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# JavaScript dependencies and generated output
+node_modules/
+**/node_modules/
+build/
+dist/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+
+# Local databases, uploads, and backups
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+backend/uploads/
+backups/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
