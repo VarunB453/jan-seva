@@ -1,6 +1,6 @@
 # JAV SEVA - Legal Metrology Verification & Certification Portal
 
-A role-based digital platform for managing the verification and certification of weighing and measuring instruments. The portal supports application submission, statutory review, field inspection, laboratory testing, certificate issuance, and public certificate verification.
+A role-based digital platform for managing the verification and certification of weighing and measuring instruments. The portal supports application submission, statutory review, field inspection, laboratory testing, certificate issuance and public certificate verification.
 
 > **Project:** SIH26036 — Smart India Hackathon  
 > **Repository:** [VarunB453/jan-seva](https://github.com/VarunB453/jan-seva)
