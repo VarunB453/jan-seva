@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npx prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "start": "node src/server.js",
+    "start": "npm run db:migrate:deploy && node src/server.js",
     "dev": "nodemon src/server.js",
     "seed:demo-portals": "node scripts/seed-demo-portals.js",
     "seed:rules": "node src/rules/seedRules.js",
@@ -33,12 +33,12 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
     "nodemailer": "^10.0.10",
+    "prisma": "^5.22.0",
     "qrcode": "^1.5.4",
     "resend": "^6.28.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "prisma": "^5.22.0"
+    "nodemon": "^3.1.14"
   },
   "allowScripts": {
     "argon2@0.45.1": true,
