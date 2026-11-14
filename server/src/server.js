@@ -15,7 +15,7 @@ const fs = require('fs');
 
 const { securityHeaders } = require('./middleware/securityHeaders');
 const { authMiddleware } = require('./middleware/authMiddleware');
-const { normalizeOrigin } = require('./utils/origin');
+const { getCorsAllowedOrigins } = require('./utils/origin');
 const prisma = require('./db');
 const { canAccessDocument } = require('./controllers/uploadController');
 const { createBackupSnapshot } = require('./services/backupService');
@@ -31,13 +31,21 @@ app.disable('x-powered-by');
 // Security Headers Middleware (OWASP recommended defense-in-depth)
 app.use(securityHeaders);
 
+const corsAllowedOrigins = getCorsAllowedOrigins();
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, Boolean(origin && corsAllowedOrigins.includes(origin)));
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Requested-With'],
+  maxAge: 86400,
+  optionsSuccessStatus: 204,
+}));
+
 // Body and Cookie Parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
-app.use(cors({
-  origin: normalizeOrigin(process.env.FRONTEND_URL || 'http://localhost:3000', 'FRONTEND_URL'),
-  credentials: true, // Allow cookies to be sent
-}));
 
 app.get('/healthz', async (req, res) => {
   try {

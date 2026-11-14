@@ -15,6 +15,7 @@ const {
 } = require('../controllers/applicationController');
 const { authRateLimiter } = require('../middleware/rateLimiter');
 const { authMiddleware } = require('../middleware/authMiddleware');
+const { getCorsAllowedOrigins } = require('../utils/origin');
 
 const router = express.Router();
 
@@ -23,6 +24,9 @@ router.post('/register', authRateLimiter, register);
 router.get('/verify', verify);
 router.post('/resend-verification', authRateLimiter, resendVerification);
 router.get('/demo-credentials', getDemoPortalCredentials);
+router.get('/login', (req, res) => {
+  return res.redirect(302, `${getCorsAllowedOrigins()[0]}/login`);
+});
 router.post('/login', authRateLimiter, login);
 router.post('/logout', logout);
 router.post('/field-officer/activate', authRateLimiter, activateFieldOfficer);

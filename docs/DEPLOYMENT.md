@@ -10,6 +10,9 @@ Required Compose variables:
 - `DATABASE_URL`: Prisma connection URL. For the bundled service, use `db` as the host and ensure the credentials match the PostgreSQL variables.
 - `JWT_SECRET`: a cryptographically random secret (at least 32 random bytes).
 - `FRONTEND_URL`, `BACKEND_URL`: the public HTTPS origin. With the supplied same-origin reverse proxy, both should be the same origin.
+- `CORS_ALLOWED_ORIGINS`: comma-separated exact browser origins permitted to call the API, such as `https://app.example.com,https://preview.example.com`. If omitted, the server allows the origin in `FRONTEND_URL`. Configure every production frontend origin here; do not use `*` with credentialed requests.
+
+The browser login page is served by the frontend at `/login`; `/api/auth/login` accepts POST requests only. A GET to that API path redirects to the first configured frontend origin's login page.
 
 Email delivery is disabled/simulated if no provider credentials are configured. Configure `RESEND_API_KEY` and `RESEND_FROM`, or the supported SMTP `EMAIL_USER` and `EMAIL_PASS`, before enabling production account verification.
 

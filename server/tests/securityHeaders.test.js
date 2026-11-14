@@ -17,10 +17,12 @@ test('sets baseline security headers and the configured origins', () => {
   const previous = {
     BACKEND_URL: process.env.BACKEND_URL,
     FRONTEND_URL: process.env.FRONTEND_URL,
+    CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS,
     NODE_ENV: process.env.NODE_ENV,
   };
   process.env.BACKEND_URL = 'https://api.example.test/';
   process.env.FRONTEND_URL = 'https://app.example.test/';
+  delete process.env.CORS_ALLOWED_ORIGINS;
   process.env.NODE_ENV = 'development';
 
   try {
@@ -40,13 +42,56 @@ test('sets baseline security headers and the configured origins', () => {
 });
 
 test('normalizes configured origins for CORS', () => {
-  const { normalizeOrigin } = require('../src/utils/origin');
+  const { normalizeOrigin, normalizeOrigins, getCorsAllowedOrigins } = require('../src/utils/origin');
   assert.equal(normalizeOrigin('https://app.example.test/'), 'https://app.example.test');
+  assert.deepEqual(
+    normalizeOrigins('https://app.example.test/, https://preview.example.test/path, https://app.example.test'),
+    ['https://app.example.test', 'https://preview.example.test']
+  );
+  assert.deepEqual(
+    getCorsAllowedOrigins({
+      CORS_ALLOWED_ORIGINS: 'https://app.example.test, https://preview.example.test',
+      FRONTEND_URL: 'https://legacy.example.test',
+    }),
+    ['https://app.example.test', 'https://preview.example.test']
+  );
+  assert.throws(
+    () => getCorsAllowedOrigins({ NODE_ENV: 'production' }),
+    /CORS_ALLOWED_ORIGINS or FRONTEND_URL must be configured in production/
+  );
+});
+
+test('includes all configured browser origins in the content security policy', () => {
+  const previous = {
+    BACKEND_URL: process.env.BACKEND_URL,
+    FRONTEND_URL: process.env.FRONTEND_URL,
+    CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS,
+  };
+  process.env.BACKEND_URL = 'https://api.example.test';
+  process.env.FRONTEND_URL = 'https://app.example.test';
+  process.env.CORS_ALLOWED_ORIGINS = 'https://app.example.test,https://preview.example.test';
+
+  try {
+    const { headers } = runMiddleware();
+    assert.match(
+      headers.get('Content-Security-Policy'),
+      /connect-src 'self' https:\/\/api\.example\.test https:\/\/app\.example\.test https:\/\/preview\.example\.test /
+    );
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
 });
 
 test('enables HSTS in production', () => {
-  const previous = process.env.NODE_ENV;
+  const previous = {
+    NODE_ENV: process.env.NODE_ENV,
+    FRONTEND_URL: process.env.FRONTEND_URL,
+  };
   process.env.NODE_ENV = 'production';
+  process.env.FRONTEND_URL = 'https://app.example.test';
   try {
     const { headers } = runMiddleware();
     assert.equal(
@@ -54,7 +99,9 @@ test('enables HSTS in production', () => {
       'max-age=31536000; includeSubDomains; preload'
     );
   } finally {
-    if (previous === undefined) delete process.env.NODE_ENV;
-    else process.env.NODE_ENV = previous;
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   }
 });

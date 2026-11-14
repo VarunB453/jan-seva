@@ -9,7 +9,7 @@
  * - HSTS in production
  */
 
-const { normalizeOrigin } = require('../utils/origin');
+const { normalizeOrigin, getCorsAllowedOrigins } = require('../utils/origin');
 
 const securityHeaders = (req, res, next) => {
   // Prevent MIME-sniffing
@@ -32,13 +32,10 @@ const securityHeaders = (req, res, next) => {
     process.env.BACKEND_URL || 'http://localhost:5001',
     'BACKEND_URL'
   );
-  const frontendOrigin = normalizeOrigin(
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'FRONTEND_URL'
-  );
+  const frontendOrigins = getCorsAllowedOrigins().join(' ');
   res.setHeader(
     'Content-Security-Policy',
-    `default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ${backendOrigin} ${frontendOrigin} ws://localhost:3000; frame-ancestors 'self';`
+    `default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ${backendOrigin} ${frontendOrigins} ws://localhost:3000; frame-ancestors 'self';`
   );
 
   // Strict Transport Security (HSTS) in production
